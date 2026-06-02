@@ -1,0 +1,1191 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>erdze</title>
+    <!-- Dynamic Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <!-- Tailwind Play CDN for immediate offline-safe double-click formatting -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter", "ui-sans-serif", "system-ui", "-apple-system", "sans-serif"],
+              display: ["Space Grotesk", "Inter", "sans-serif"],
+              mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+            }
+          }
+        }
+      }
+
+      function handleImgError(img, youtubeId) {
+        if (!img.dataset.attempt) {
+          img.dataset.attempt = "1";
+          // Attempt 1: try the local relative path (if they downloaded thumbnails next to the html)
+          img.src = "thumbnails/" + youtubeId + ".jpg";
+        } else if (img.dataset.attempt === "1") {
+          img.dataset.attempt = "2";
+          // Attempt 2: try the shared cloud preview URL directly
+          img.src = "https://ais-pre-ureir6xez7vdulmycsuaoi-357491066519.us-west1.run.app/thumbnails/" + youtubeId + ".jpg";
+        } else if (img.dataset.attempt === "2") {
+          img.dataset.attempt = "3";
+          // Attempt 3: try YouTube's standard image thumbnail
+          img.src = "https://img.youtube.com/vi/" + youtubeId + "/hqdefault.jpg";
+        } else if (img.dataset.attempt === "3") {
+          img.dataset.attempt = "4";
+          // Attempt 4: try YouTube's secondary default image thumbnail
+          img.src = "https://img.youtube.com/vi/" + youtubeId + "/0.jpg";
+        } else {
+          // Final fallback: hide the image and render a beautiful slate-colored SVG placeholder card
+          img.style.display = 'none';
+          const container = img.parentElement;
+          if (container) {
+            // Check if we already inserted a placeholder
+            if (!container.querySelector('.img-placeholder-fallback')) {
+              const placeholder = document.createElement('div');
+              placeholder.className = "img-placeholder-fallback absolute inset-0 bg-neutral-950 flex flex-col items-center justify-center p-4 text-center select-none border border-white/5";
+              placeholder.innerHTML = `
+                <div class="w-10 h-10 rounded-full bg-neutral-900 border border-white/10 text-neutral-400 flex items-center justify-center mb-2">
+                  <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <span class="text-[10px] font-mono uppercase tracking-[0.15em] text-neutral-500">Превью недоступно</span>
+              `;
+              container.appendChild(placeholder);
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      /* Embed all custom animations and custom scrollbars for perfect execution */
+      html, body {
+        background-color: #000000;
+        color: #F5F5F5;
+        font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+        overflow-x: hidden;
+        scroll-behavior: smooth;
+      }
+
+      /* Custom styles for high-fidelity glassmorphism with neutral aesthetic */
+      .glass-panel {
+        background: rgba(8, 8, 8, 0.75);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid #1a1a1a;
+      }
+
+      .glass-panel-hover {
+        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .glass-panel-hover:hover {
+        background: rgba(12, 12, 12, 0.9);
+        border-color: #262626;
+        box-shadow: 0 16px 48px -12px rgba(0, 0, 0, 0.95);
+        transform: translateY(-2px);
+      }
+
+      /* Custom interactive scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #050505;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #171717;
+        border-radius: 3px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #262626;
+      }
+
+      /* Custom animations for glowing background balls */
+      @keyframes float {
+        0% { transform: translate(0px, 0px) scale(1); }
+        33% { transform: translate(30px, -40px) scale(1.08); }
+        66% { transform: translate(-20px, 20px) scale(0.95); }
+        100% { transform: translate(0px, 0px) scale(1); }
+      }
+
+      .animate-float-slow {
+        animation: float 22s infinite ease-in-out;
+      }
+
+      .animate-float-slower {
+        animation: float 28s infinite ease-in-out reverse;
+      }
+
+      .animate-float-fast {
+        animation: float 15s infinite ease-in-out;
+      }
+
+      /* Elegant micro-transitions for tabs and modals */
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .animate-fade-in-quick {
+        animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes scaleUp {
+        from { opacity: 0; transform: scale(0.96) translateY(8px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+      }
+
+      .animate-scale-up {
+        animation: scaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+    </style>
+  </head>
+  <body class="bg-black text-[#F5F5F5]">
+    
+    <div 
+      class="relative min-h-screen bg-black text-[#F5F5F5] font-sans selection:bg-neutral-800 selection:text-white max-w-[1240px] mx-auto shadow-2xl overflow-hidden"
+    >
+      
+      <!-- BACKGROUND GRAPHICS: Clean, purely flat pitch black styling with subtle grid -->
+      <div class="fixed inset-0 overflow-hidden pointer-events-none z-0 max-w-[1240px] mx-auto">
+        <!-- Soft atmospheric gray gradient highlight -->
+        <div id="bg-highlight" class="absolute top-[-5%] left-[-15%] w-[55rem] h-[55rem] rounded-full bg-white/[0.01] mix-blend-screen filter blur-[140px] opacity-70 transition-transform duration-300 ease-out"></div>
+        
+        <!-- Subtle background grounding grid -->
+        <div 
+          class="absolute inset-0 opacity-[0.015]" 
+          style="background-image: radial-gradient(ellipse at center, #ffffff 1px, transparent 1px); background-size: 40px 40px;"
+        ></div>
+      </div>
+
+      <!-- STICKY GLASSMORPHIC HEADER -->
+      <header class="sticky top-0 z-40 w-full border-b border-white/[0.08] bg-black/60 backdrop-blur-xl">
+        <div class="px-4 sm:px-12 h-20 flex items-center justify-between gap-4 relative">
+          
+          <!-- COLUMN 1: Logo -->
+          <div class="flex-1 flex items-center justify-start min-w-[70px] sm:min-w-[150px]">
+            <svg 
+              class="w-[110px] h-[110px] sm:w-[144px] sm:h-[144px] select-none text-white shrink-0 cursor-pointer pointer-events-auto" 
+              viewBox="0 0 2048 2048" 
+              style="display: block;"
+              preserveAspectRatio="xMidYMid meet"
+              onclick="window.scrollTo({top: 0, behavior: 'smooth'})"
+            >
+              <path transform="translate(0,0)" fill="currentColor" d="M 1296.47 606.807 C 1298.02 608.752 1299.23 609.659 1299.18 612.258 C 1299.03 619.981 1309.22 645.601 1311.66 656.206 C 1321.16 650.906 1324.72 649.687 1335.01 647.023 C 1335.37 659.563 1333.43 665.068 1332.85 676.941 C 1332.71 679.912 1335.67 680.91 1338.29 682.54 C 1329.94 726.174 1307.24 775.661 1288.21 815.573 C 1280.92 830.864 1272.16 846.458 1264.99 861.744 C 1262.24 867.594 1258.91 881.513 1256.76 888.34 C 1252.22 902.642 1246.63 916.591 1240.05 930.075 C 1228.57 953.693 1214.85 974.988 1199.88 996.502 C 1192.77 1006.73 1184.21 1015.45 1178.53 1026.14 L 1049.73 1273.23 L 1014.38 1339.81 C 1007.56 1352.51 998.127 1370.96 989.9 1382.21 C 989.302 1379.6 988.538 1376.1 988.201 1373.44 C 985.532 1352.34 970.139 1348.3 984.888 1328.08 C 978.67 1315.13 976.651 1298.06 974.505 1283.82 C 981.037 1272.04 986.842 1261.46 992.679 1249.33 L 993.312 1247.62 C 987.414 1245.14 977.681 1245.11 970.912 1243.21 C 924.671 1230.24 891.612 1201.66 867.306 1160.79 C 848.406 1126.83 832.578 1097.6 841.633 1057.99 C 869.207 937.361 951.032 840.454 1085.86 868.82 C 1114.19 874.78 1132.69 891.828 1147.3 916.761 C 1159.29 890.419 1168.12 858.78 1176.36 831.08 C 1178.34 824.447 1185.01 795.681 1187.43 791.002 C 1192.44 781.274 1202.14 769.449 1208.26 757.048 C 1216.04 741.014 1223.51 724.831 1230.67 708.509 C 1245.72 673.773 1262.88 627.959 1296.47 606.807 z M 1090.76 925.791 C 1094.61 931.11 1100.02 936.587 1094.51 942.578 C 1085.54 946.162 1070.84 940.58 1063.16 943.137 C 1055.32 945.752 1043.27 950.604 1035.56 953.109 C 1025.35 957.815 1003.65 961.819 994.922 967.929 C 971.685 984.193 952.425 1014.99 940.646 1039.99 C 915.21 1093.97 938.476 1126.68 985.442 1156.56 C 1001.67 1165.84 1010.6 1169.03 1029.46 1170.85 C 1046.35 1132.48 1062.89 1093.95 1079.07 1055.28 C 1091.88 1024.74 1102.2 992.81 1121.54 966.252 C 1128.33 956.933 1135.9 942.518 1140.41 931.793 L 1119.68 919.322 C 1101.85 927.172 1104.27 915.907 1091.04 911.985 L 1090.76 925.791 z"/>
+              <path transform="translate(0,0)" fill="currentColor" d="M 1516.92 870.956 C 1522.23 870.495 1540.67 877.974 1543.74 882.296 C 1542.83 889.658 1534.06 886.845 1525.6 898.991 L 1524.83 900.121 C 1525.62 903.666 1526.76 907.609 1527.69 911.163 C 1532.74 912.752 1538.49 914.912 1543.54 916.683 C 1541.76 923.995 1537.67 947.153 1533.76 951.993 C 1524.8 963.089 1505.96 978.329 1494.4 987.327 C 1464.7 1010.45 1433.51 1037.36 1403.24 1059.15 C 1381.91 1074.49 1354.76 1091.32 1332.46 1106.06 C 1375.3 1103.71 1419.08 1103.7 1461.99 1103.41 C 1471.26 1103.34 1520.31 1103.71 1516.9 1117.82 C 1512.01 1119.74 1504.69 1118.13 1500.27 1119.13 C 1489.05 1121.65 1482 1132.7 1475.97 1141.58 C 1461.16 1146.93 1456.97 1153.73 1448.67 1166.46 C 1415.55 1161.76 1408.25 1169.2 1376.38 1176.42 C 1342.42 1184.11 1286.73 1198.38 1252.72 1192.65 C 1249.75 1191.8 1248.17 1191 1245.19 1191.77 C 1238.77 1200.71 1213.4 1195.95 1202.26 1197.17 C 1195.4 1197.92 1178.69 1197.21 1172.63 1194.81 C 1155.02 1187.81 1164.8 1178.56 1170.62 1168.38 C 1170.3 1166.05 1170.33 1166.34 1168.94 1164.56 C 1171.05 1161.95 1174.92 1161.29 1178.31 1160.26 C 1174.54 1152.74 1170.28 1146.55 1165.67 1139.57 C 1176.45 1131.45 1184.85 1125.64 1193.68 1115.27 C 1203.12 1113.4 1213.36 1111.36 1222.88 1110.49 C 1222.88 1106.06 1223.51 1102.36 1224.09 1098 C 1243.83 1087.93 1272.01 1065.13 1289.57 1051.01 C 1326.37 1021.4 1362.24 990.071 1398.41 959.636 C 1395.98 960.015 1385.81 961.887 1383.85 961.629 C 1357.62 958.181 1325.62 965.809 1300.76 956.352 C 1270.08 944.679 1319.25 926.622 1298.85 905.722 C 1294.65 901.418 1307.88 890.408 1310.65 884.278 C 1315.59 882.122 1327.47 875.887 1332.05 875.478 C 1342.14 874.576 1355.1 876.276 1365.52 876.709 C 1385.09 877.43 1404.67 877.878 1424.25 878.053 C 1438.49 878.164 1450.37 876.998 1464.52 875.645 C 1471.78 874.951 1485.1 881.016 1492.44 877.054 C 1494.58 875.897 1494.47 875.843 1496.96 875.137 C 1505.62 879.817 1508 875.348 1516.92 870.956 z"/>
+              <path transform="translate(0,0)" fill="currentColor" d="M 663.6 862.593 C 666.809 864.029 668.501 864.068 670.034 866.505 C 669.748 867.274 668.182 871.451 668.449 871.895 C 674.101 881.324 681.078 888.419 686.002 898.435 L 690.185 897.405 C 702.404 894.331 719.461 896.147 732.462 896.631 C 750.448 897.35 768.446 897.773 786.446 897.898 C 808.814 897.881 830.602 895.479 853.173 897.481 C 863.465 898.393 905.372 889.753 905.516 905.252 C 902.631 908.343 897.999 908.541 894.351 910.599 C 887.362 914.541 884.573 925.262 882.37 932.415 C 872.743 939.038 866.137 947.514 859.101 956.688 C 827.555 959.627 792.023 973.096 760.576 978.617 C 738.431 982.505 716.799 973.973 694.797 982.419 C 692.336 983.363 692.897 982.924 692.125 984.727 L 693.744 988.206 C 693.803 985.828 630.963 1120.23 627.557 1126.63 C 619.109 1143.21 557.406 1261.19 547.236 1267.37 L 543.201 1265.82 C 540.865 1262.7 545.225 1254.82 544.062 1251.1 C 542.506 1246.12 530.305 1237.34 529.757 1232.7 C 530.076 1231.89 532.296 1226.09 531.999 1225.63 C 527.235 1218.24 522.555 1212.12 518.21 1204.27 C 532.935 1178.71 535.37 1139.74 542.802 1110.61 C 545.461 1100.19 565.789 1071.33 565.781 1071.45 C 567.31 1049.03 578.759 1034.85 588.605 1014.95 C 591.046 1010.02 596.488 1005.53 599.625 1000.43 C 598.498 998.112 597.579 996.808 597.642 994.238 C 610.084 968.693 623.169 943.559 635.123 917.737 C 642.723 901.321 650.3 884.558 658.057 868.203 C 659.266 865.654 661.29 864.149 663.6 862.593 z"/>
+              <path transform="translate(0,0)" fill="currentColor" d="M 419.616 1103.47 C 437.487 1103.17 489.991 1101.24 507.463 1111.56 C 509.386 1112.7 509.581 1115.4 509.789 1117.41 C 501.911 1124.4 491.701 1106.59 467.965 1141.78 C 453.035 1147.08 449.329 1153.61 440.857 1166.43 C 436.614 1165.93 425.78 1164.18 422.036 1164.49 C 403.845 1165.98 384.391 1172.81 366.164 1177.01 C 333.191 1184.6 299.249 1192.66 265.305 1194.13 C 259.782 1194.37 243.02 1192.16 236.887 1191.39 L 234.293 1196.3 C 218.156 1198.94 183.576 1197.15 167.762 1195.8 C 148.636 1194.16 157.797 1174.58 162.29 1165.07 C 164.104 1161.23 166.893 1161.47 170.348 1160.3 C 166.149 1151.99 163.051 1147.4 157.752 1139.63 C 169.388 1130.94 176.363 1125.92 186.063 1115.2 C 199.155 1112.26 212.709 1110.21 226.105 1109.51 C 240.482 1108.75 304.318 1111.01 312.483 1106.99 C 317.88 1104.33 405.26 1103.71 419.616 1103.47 z"/>
+              <path transform="translate(0,0)" fill="currentColor" d="M 1775.32 1103.46 C 1788.37 1103.27 1866.77 1099.82 1865.24 1117.34 C 1847.47 1127.4 1847.77 1105.62 1823.76 1141.78 C 1808.84 1147.1 1805.04 1153.63 1796.65 1166.47 C 1790.91 1165.76 1781.18 1163.99 1775.66 1164.58 C 1760.97 1166.13 1744.1 1171.44 1729.53 1175.15 C 1710.16 1180.07 1690.63 1184.38 1670.98 1188.08 C 1651.64 1191.59 1629.29 1194.38 1609.6 1194.06 C 1605.7 1194 1598.7 1191.68 1592.7 1191.29 L 1590.05 1196.24 C 1580.16 1197.89 1563.37 1197.08 1553.05 1197.17 C 1541.34 1197.27 1516.4 1199.62 1511.46 1186.73 C 1508.64 1179.36 1517.8 1173.36 1518.22 1164.39 C 1520.56 1161.17 1521.35 1161.85 1526.11 1160.31 C 1521.91 1151.92 1518.9 1147.5 1513.54 1139.69 C 1524.44 1131.42 1532.7 1125.58 1541.81 1115.19 C 1578.73 1106.95 1612.68 1109.66 1650.01 1109.12 C 1652.67 1109.08 1659.89 1106.97 1663.38 1106.42 C 1664.33 1108.27 1663.76 1107.5 1665.01 1108.81 L 1666.04 1108.34 C 1675.4 1104.33 1690.3 1105.63 1700.98 1105.33 C 1725.76 1104.54 1750.54 1103.91 1775.32 1103.46 z"/>
+              <path transform="translate(0,0)" fill="currentColor" d="M 322.614 875.017 C 331.257 874.843 344.326 875.975 353.461 876.371 C 374.126 877.399 394.811 877.944 415.501 878.007 C 427.682 877.988 442.26 875.713 453.557 876.225 C 475.807 877.232 497.081 876.856 519.377 875.933 C 525.145 875.694 536.846 877.629 536.637 885.226 C 533.413 888.577 528.285 888.558 524.975 890.659 C 517.895 895.153 515.004 905.497 512.698 912.821 C 502.235 920.671 497.072 927.867 488.918 937.98 L 477.998 939.405 C 446.256 945.519 414.622 956.011 382.857 961.122 C 364.888 962.474 350.908 958.908 332.521 961.522 C 321.588 963.076 288.988 959.526 282.864 948.84 C 278.667 941.517 292.825 933.723 294.392 924.455 C 296.427 912.416 294.485 911.375 288.306 901.269 C 295.166 895.365 298.898 892.818 302.706 884.403 C 309.454 881.518 316.095 878.387 322.614 875.017 z"/>
+              <path transform="translate(0,0)" fill="currentColor" d="M 1678.55 874.999 C 1683.16 874.946 1687.99 875.432 1692.58 875.602 C 1732.56 877.076 1772.55 880.263 1812.41 875.703 C 1820.06 874.828 1833.39 881.397 1840.96 876.725 C 1842.93 875.509 1842.88 875.278 1845.35 875.102 C 1856.16 880.995 1891.37 868.152 1892.59 885.319 C 1889.45 888.693 1884.37 888.049 1881.15 890.316 C 1873.6 895.629 1871.01 904.75 1868.52 912.816 C 1857.6 921.102 1853.42 926.927 1844.93 937.933 L 1834.7 939.279 C 1803.02 945.165 1772.33 955.311 1740.7 960.883 C 1734.85 961.913 1724.68 962.025 1718.82 961.142 C 1700.72 958.419 1683.7 964.161 1665.65 960.148 C 1656.96 958.225 1643.15 957.643 1638.64 948.475 C 1638.46 948.101 1637.73 945.693 1637.76 945.618 C 1643.26 936.13 1649 926.641 1653.27 916.601 C 1638.95 894.607 1651.12 901.845 1658.53 884.319 C 1665.49 881.347 1671.75 878.332 1678.55 874.999 z"/>
+              <path transform="translate(0,0)" fill="currentColor" d="M 269.116 986.183 C 273.562 986.074 274.312 988.658 279.446 988.804 L 281.744 986.624 C 286.628 985.959 289.169 987.545 293.543 987.848 C 340.744 991.114 388.709 987.318 436.107 990.56 C 445.246 991.185 460.074 990.499 468.049 993.602 C 469.975 996.899 469.859 995.39 469.895 998.621 C 454.893 1009.92 432.891 1037.32 419.36 1052.4 C 413.595 1050.66 409.361 1048.79 403.772 1050.69 C 375.7 1060.33 347.373 1068.88 317.782 1072.55 C 308.356 1074.37 297.259 1071.4 288.172 1072.13 C 271.862 1073.45 256.838 1073.81 240.496 1073.71 C 235.315 1069.62 233.34 1066.75 230.067 1061.14 C 233.002 1052.09 236.692 1041.52 238.312 1032.13 C 238.793 1029.34 237.155 1028.48 234.818 1025.63 C 231.525 1021.62 231.472 1020.39 230.249 1015.4 L 229.871 1013.83 C 239.321 1000.51 252.926 989.631 269.116 986.183 z"/>
+              <path transform="translate(0,0)" fill="currentColor" d="M 1624.77 986.234 C 1628.39 986.012 1630.14 988.201 1635.01 988.848 L 1637.59 986.581 C 1643.43 985.973 1651.89 988.959 1659.04 989.017 C 1700.62 989.352 1742.41 988.298 1783.94 990.257 C 1794.18 990.74 1814.45 990.709 1823.34 993.261 C 1825.32 995.407 1825.22 995.225 1825.89 998.067 C 1806.47 1015.31 1792.31 1032.99 1775.19 1052.43 C 1769.52 1050.7 1765.27 1048.82 1759.77 1050.64 C 1731.65 1060.25 1703.73 1068.72 1674.11 1072.5 C 1664.69 1074.41 1653.63 1071.46 1644.57 1072.12 C 1628.2 1073.32 1612.94 1073.8 1596.53 1073.77 C 1591.3 1069.93 1589.24 1066.74 1585.8 1061.5 C 1588.85 1051.98 1592.69 1040.86 1594.23 1031.02 C 1594.44 1029.69 1591.8 1026.86 1590.81 1025.79 C 1587.5 1022.21 1587.09 1019.86 1585.8 1015.23 L 1585.43 1013.61 C 1596.72 1000.2 1607.24 989.987 1624.77 986.234 z"/>
+            </svg>
+          </div>
+
+          <!-- COLUMN 2: Navigation switcher pill -->
+          <div class="flex-initial flex justify-center z-45 px-2 sm:px-0">
+            <nav class="flex bg-white/[0.03] backdrop-blur-xl rounded-full p-1 border border-white/[0.08] relative w-[110px] sm:w-[320px] md:w-[380px] shadow-lg overflow-hidden">
+              <button
+                id="tab-btn-overview"
+                class="flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 text-[11px] font-mono tracking-widest uppercase relative z-10 transition-colors cursor-pointer text-white font-bold"
+                style="WebkitTapHighlightColor: transparent"
+              >
+                <!-- SVG Sparkles inline icon -->
+                <svg class="w-4 h-4 opacity-80 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+                  <path d="m5 3 1 2.5L8.5 6 6 7 5 9.5 4 7 1.5 6 4 5.5z"/>
+                  <path d="m19 17 1 2.5 2.5.5-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1z"/>
+                </svg>
+                <span class="hidden sm:inline-block">Обзор</span>
+              </button>
+              <button
+                id="tab-btn-portfolio"
+                class="flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 text-[11px] font-mono tracking-widest uppercase relative z-10 transition-colors cursor-pointer text-neutral-400 hover:text-white"
+                style="WebkitTapHighlightColor: transparent"
+              >
+                <!-- SVG Film inline icon -->
+                <svg class="w-4 h-4 opacity-80 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="18" x="3" y="3" rx="2"/>
+                  <path d="M7 3v18M17 3v18M3 7.5h4M3 12h18M3 16.5h4M17 7.5h4M17 16.5h4"/>
+                </svg>
+                <span class="hidden sm:inline-block">Портфолио</span>
+              </button>
+              
+              <!-- Sliding active tab element animation -->
+              <div
+                id="nav-tab-underlay"
+                class="absolute top-1 bottom-1 w-[calc(50%-6px)] rounded-full bg-white/[0.08] border border-white/10 transition-transform duration-300 ease-out left-[4px]"
+              ></div>
+            </nav>
+          </div>
+
+          <!-- COLUMN 3: Right Spacer -->
+          <div class="flex-1 flex items-center justify-end min-w-[10px] sm:min-w-[120px]"></div>
+
+        </div>
+      </header>
+
+      <!-- STACKED CORE LAYOUT WINDOW -->
+      <main class="relative z-10">
+        <div class="grid grid-cols-1 lg:grid-cols-12 min-h-[calc(100vh-5rem)]">
+          
+          <!-- LEFT SIDE: Active Screen Content Pane -->
+          <div class="lg:col-span-8 p-6 sm:p-12 space-y-12">
+            
+            <!-- SCREEN A: OVERVIEW / BUSINESS CARD -->
+            <section id="overview-screen" class="space-y-8 animate-fade-in-quick">
+              <!-- Hero Pitch Typography -->
+              <div class="space-y-6">
+                <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-[1.2] max-w-2xl font-display">
+                  Эрик Тимофеев. <br class="hidden sm:block" /> Видеомонтаж. Оператор.
+                </h1>
+
+                <p class="text-neutral-200 text-base sm:text-lg md:text-xl leading-relaxed max-w-2xl font-normal">
+                  Профессионально занимаюсь видеомонтажом и видеосъёмкой более <strong class="font-bold text-white">10 лет</strong>. Мои примеры работ можно увидеть в разделе <button id="link-to-portfolio" class="underline decoration-neutral-500 underline-offset-4 text-neutral-300 hover:text-white cursor-pointer transition-colors font-medium">портфолио</button>.
+                </p>
+              </div>
+
+              <!-- Contact block -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                <div 
+                  class="col-span-1 sm:col-span-2 p-6 sm:p-8 bg-white/[0.02] backdrop-blur-md border border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 rounded-md shadow-2xl hover:border-white/20 transition-all duration-300 group"
+                >
+                   <div class="space-y-3 max-w-xl">
+                     <div class="flex items-center gap-3.5">
+                       <svg class="w-8 h-8 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                       </svg>
+                       <h4 class="text-base sm:text-lg font-mono font-bold text-white uppercase tracking-[0.15em]">Связаться со мной</h4>
+                     </div>
+                     <p class="text-neutral-300 text-sm sm:text-base leading-relaxed font-normal">
+                       Напишите мне о вашем проекте, отвечу на вопросы, договоримся о стоимости.
+                     </p>
+                   </div>
+
+                   <div class="w-full sm:w-auto shrink-0 flex flex-col gap-3 pt-2 sm:pt-0">
+                     <a 
+                       href="https://t.me/erdzepro" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       class="flex items-center justify-center gap-3 w-full sm:w-auto py-4 px-6 rounded-md bg-neutral-900 hover:bg-neutral-800 border border-white/10 text-white font-mono text-sm uppercase tracking-wider transition-all duration-200 cursor-pointer select-none shadow-xl transform active:scale-95"
+                     >
+                       <svg class="w-5 h-5 fill-[#24A1DE] shrink-0" viewBox="0 0 24 24">
+                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.11.02-1.93 1.23-5.46 3.62-.51.35-.98.53-1.39.51-.46-.01-1.35-.26-2.01-.48-.81-.27-1.46-.42-1.4-.88.03-.24.37-.49 1.02-.75 3.98-1.73 6.64-2.88 7.97-3.45 3.79-1.63 4.57-1.91 5.09-1.92.11 0 .37.03.54.17.14.12.18.28.2.4-.01.07-.02.21-.03.26z"/>
+                       </svg>
+                       <span>Написать в Telegram</span>
+                       <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                         <line x1="7" y1="17" x2="17" y2="7"/>
+                         <polyline points="7 7 17 7 17 17"/>
+                       </svg>
+                     </a>
+                     <a 
+                       href="https://vk.com/erdze" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       class="flex items-center justify-center gap-3 w-full sm:w-auto py-4 px-6 rounded-md bg-neutral-900 hover:bg-neutral-800 border border-white/10 text-white font-mono text-sm uppercase tracking-wider transition-all duration-200 cursor-pointer select-none shadow-xl transform active:scale-95"
+                     >
+                       <svg class="w-5 h-5 fill-[#4C75A3] shrink-0" viewBox="0 0 24 24">
+                         <path d="M15.02 2H8.98C4.04 2 2 4.04 2 8.98v6.04C2 19.96 4.04 22 8.98 22h6.04c4.94 0 6.98-2.04 6.98-6.98V8.98C22 4.04 19.96 2 15.02 2zm3.32 12.87c.23.23.49.44.7.69.23.27.44.55.59.87.21.46-.11.96-.6.98l-2.61.02c-.75.02-1.34-.23-1.84-.78-.4-.44-.78-.89-1.22-1.31-.22-.21-.46-.22-.68-.02-.22.21-.3.49-.31.78-.02.66-.46 1.13-1.09 1.18-.54.04-1.07-.02-1.59-.19-1.42-.47-2.51-1.34-3.41-2.43C6.18 12.02 5.09 9.8 4.14 7.51c-.13-.31.02-.63.35-.63h2.62c.3 0 .49.17.58.46.46 1.48 1.15 2.83 2.11 4.04.16.2.33.4.56.51.31.14.51.01.62-.31.11-.32.14-.66.13-.99-.02-1.07-.37-1.66-1.31-1.81-.22-.03-.18-.16-.09-.23.3-.23.69-.32 1.08-.32l3.23.01c.42.06.63.29.69.75.01.07.01.14.01.21v2.79c-.01.24.13.43.34.48.22.05.4-.04.54-.2 1-1.15 1.71-2.45 2.25-3.86.09-.23.23-.39.49-.39h2.69c.47 0 .61.27.46.66-.35.91-.87 1.73-1.44 2.51-.43.58-.87 1.15-1.3 1.73-.24.32-.23.55.02.86.41.52.89 1.01 1.34 1.51z"/>
+                       </svg>
+                       <span>Группа ВКонтакте</span>
+                       <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                         <line x1="7" y1="17" x2="17" y2="7"/>
+                         <polyline points="7 7 17 7 17 17"/>
+                       </svg>
+                     </a>
+                   </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- SCREEN B: DEDICATED PORTFOLIO SCREEN -->
+            <section id="portfolio-screen" class="space-y-8 hidden animate-fade-in-quick">
+              <!-- Header title containing inline sub-filters -->
+              <div class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-white/[0.08] gap-4">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-neutral-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20.2 6 3 11.1"/>
+                      <path d="m22.5 13.5-3.1-9.4c-.2-.6-.9-.9-1.5-.7l-13.8 4.6c-.6.2-.9.9-.7 1.5l3.1 9.4c.2.6.9.9 1.5.7l13.8-4.6c.6-.2.9-.9.7-1.5z"/>
+                      <path d="M2 13h20"/>
+                      <path d="m5 13 4-4"/>
+                      <path d="m11 13 4-4"/>
+                      <path d="m17 13 4-4"/>
+                    </svg>
+                    <h2 id="works-count-label" class="text-sm uppercase tracking-[0.2em] font-medium text-white">
+                      Работы (7)
+                    </h2>
+                  </div>
+                  <div id="active-status-label" class="text-[10px] font-mono uppercase tracking-widest text-neutral-400 font-semibold">
+                    Все работы
+                  </div>
+                </div>
+
+                <!-- High contrast subcategory tag selectors -->
+                <div class="flex gap-2 flex-wrap w-full">
+                  <button 
+                    id="filter-btn-all" 
+                    class="px-4 py-2 rounded-md text-xs font-mono tracking-wider transition-all cursor-pointer border bg-white/[0.08] text-white border-white/20 shadow-md shadow-black/80"
+                    style="WebkitTapHighlightColor: transparent"
+                  >
+                    Все работы
+                  </button>
+                  <button 
+                    id="filter-btn-montage" 
+                    class="px-4 py-2 rounded-md text-xs font-mono tracking-wider transition-all cursor-pointer border bg-white/[0.02] text-neutral-400 border-white/[0.06] hover:text-white hover:border-white/15"
+                    style="WebkitTapHighlightColor: transparent"
+                  >
+                    Видеомонтаж
+                  </button>
+                  <button 
+                    id="filter-btn-shooting" 
+                    class="px-4 py-2 rounded-md text-xs font-mono tracking-wider transition-all cursor-pointer border bg-white/[0.02] text-neutral-400 border-white/[0.06] hover:text-white hover:border-white/15"
+                    style="WebkitTapHighlightColor: transparent"
+                  >
+                    Видеосъемка
+                  </button>
+                </div>
+              </div>
+
+              <!-- Top of page disclaimer for high-visibility -->
+              <div class="p-5 sm:p-6 rounded-md bg-white/[0.02] border border-white/[0.08] flex items-center gap-4">
+                <svg class="w-6 h-6 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                  <path d="M12 17h.01"/>
+                </svg>
+                <div>
+                  <p class="text-sm sm:text-base text-neutral-200 leading-relaxed font-normal">
+                    Это не все мои работы. Могу предоставить больше по вашему запросу...
+                  </p>
+                  <p class="text-neutral-400 text-xs sm:text-sm mt-1 leading-normal font-normal">
+                    Еще некоторые мои работы можно найти в группе <a href="https://vk.com/erdze" target="_blank" rel="noopener noreferrer" class="text-white hover:underline decoration-neutral-500 underline-offset-2">VK</a>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Video thumb grids - Rendered statically for high load speed -->
+              <div id="portfolio-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                
+                <!-- CARD M1 -->
+                <div 
+                  class="portfolio-card group relative rounded-md overflow-hidden bg-white/[0.01] backdrop-blur-xl border border-white/[0.06] hover:border-white/20 transition-all duration-300 cursor-pointer flex flex-col h-full hover:shadow-[0_24px_50px_rgba(0,0,0,0.9)]"
+                  style="WebkitTapHighlightColor: transparent"
+                  data-id="m1"
+                  data-youtube-id="m41V9fap43A"
+                  data-category="montage"
+                  data-role="МОНТАЖ"
+                  data-title="После Этой Тренировки Ты Станешь Как Тодзи Фушигуро | Магическая Битва 2 Сезон"
+                  data-description="Обучающий развлекательный формат"
+                  data-duration="11:15"
+                  data-tags="Обучение, Развлечение, Тодзи"
+                >
+                  <div class="relative aspect-video w-full overflow-hidden bg-neutral-950 shrink-0 border-b border-white/[0.06]">
+                    <!-- YouTube Direct link button -->
+                    <a 
+                      href="https://www.youtube.com/watch?v=m41V9fap43A" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      class="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-red-650 hover:bg-red-700 active:scale-95 text-white font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-md cursor-pointer select-none"
+                      onclick="event.stopPropagation();"
+                    >
+                      <svg class="w-3.5 h-3.5 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                        <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.518 3.55 12 3.55 12 3.55s-7.518 0-9.388.505a3.003 3.003 0 0 0-2.11 2.108C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.482 20.45 12 20.45 12 20.45s7.518 0 9.388-.505a3.003 3.003 0 0 0 2.11-2.108C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <span>Посмотреть на YouTube</span>
+                    </a>
+                    <img
+                      src="thumbnails/m41V9fap43A.jpg"
+                      onerror="handleImgError(this, 'm41V9fap43A')"
+                      alt="После Этой Тренировки"
+                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-102"
+                      loading="lazy"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90"></div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
+                      <div class="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg transform scale-100 group-hover:scale-110 transition-transform duration-200">
+                        <svg class="w-5 h-5 fill-current ml-0.5 text-black" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="6 3 20 12 6 21 6 3"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <span class="absolute bottom-3 right-3 px-2 py-0.5 text-[9px] font-mono bg-black/95 rounded-xs border border-white/10 text-neutral-400">
+                      11:15
+                    </span>
+                  </div>
+                  <div class="p-5 flex flex-col justify-between flex-grow bg-transparent">
+                    <div class="space-y-1.5">
+                      <h3 class="text-sm font-medium text-white group-hover:text-neutral-300 transition-colors line-clamp-1">
+                        После Этой Тренировки Ты Станешь Как Тодзи Фушигуро | Магическая Битва 2 Сезон
+                      </h3>
+                      <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+                        Обучающий развлекательный формат
+                      </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
+                      <span class="text-neutral-500 uppercase tracking-widest text-[10px]">Участие:</span>
+                      <span class="text-white text-right font-bold uppercase tracking-[0.15em] text-[11px] bg-white/[0.08] border border-white/10 px-3 py-1 bg-neutral-900 shadow-sm rounded-sm">
+                        МОНТАЖ
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CARD M2 -->
+                <div 
+                  class="portfolio-card group relative rounded-md overflow-hidden bg-white/[0.01] backdrop-blur-xl border border-white/[0.06] hover:border-white/20 transition-all duration-300 cursor-pointer flex flex-col h-full hover:shadow-[0_24px_50px_rgba(0,0,0,0.9)]"
+                  style="WebkitTapHighlightColor: transparent"
+                  data-id="m2"
+                  data-youtube-id="0nQmQ1uXab4"
+                  data-category="shooting"
+                  data-role="ОПЕРАТОР, МОНТАЖ"
+                  data-title="ЖИМ ЛЕЖА В ЦЕНТРЕ ГОРОДА!? ЗАРУБА!? КОРЯГА vs ГЕГЕМОН!? РАЗДАЕМ ДЕНЬГИ ПРОХОЖИМ! СИЛА УЛИЦ #2"
+                  data-description="Социальный формат"
+                  data-duration="19:42"
+                  data-tags="Социальный формат, Челендж, Интервью"
+                >
+                  <div class="relative aspect-video w-full overflow-hidden bg-neutral-950 shrink-0 border-b border-white/[0.06]">
+                    <!-- YouTube Direct link button -->
+                    <a 
+                      href="https://www.youtube.com/watch?v=0nQmQ1uXab4" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      class="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-red-650 hover:bg-red-700 active:scale-95 text-white font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-md cursor-pointer select-none"
+                      onclick="event.stopPropagation();"
+                    >
+                      <svg class="w-3.5 h-3.5 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                        <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.518 3.55 12 3.55 12 3.55s-7.518 0-9.388.505a3.003 3.003 0 0 0-2.11 2.108C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.482 20.45 12 20.45 12 20.45s7.518 0 9.388-.505a3.003 3.003 0 0 0 2.11-2.108C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <span>Посмотреть на YouTube</span>
+                    </a>
+                    <img
+                      src="thumbnails/0nQmQ1uXab4.jpg"
+                      onerror="handleImgError(this, '0nQmQ1uXab4')"
+                      alt="Жим лежа в центре города"
+                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-102"
+                      loading="lazy"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90"></div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
+                      <div class="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg transform scale-100 group-hover:scale-110 transition-transform duration-200">
+                        <svg class="w-5 h-5 fill-current ml-0.5 text-black" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="6 3 20 12 6 21 6 3"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <span class="absolute bottom-3 right-3 px-2 py-0.5 text-[9px] font-mono bg-black/95 rounded-xs border border-white/10 text-neutral-400">
+                      19:42
+                    </span>
+                  </div>
+                  <div class="p-5 flex flex-col justify-between flex-grow bg-transparent">
+                    <div class="space-y-1.5">
+                      <h3 class="text-sm font-medium text-white group-hover:text-neutral-300 transition-colors line-clamp-1">
+                        ЖИМ ЛЕЖА В ЦЕНТРЕ ГОРОДА!? ЗАРУБА!? КОРЯГА vs ГЕГЕМОН!? РАЗДАЕМ ДЕНЬГИ ПРОХОЖИМ! СИЛА УЛИЦ #2
+                      </h3>
+                      <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+                        Социальный формат
+                      </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
+                      <span class="text-neutral-500 uppercase tracking-widest text-[10px]">Участие:</span>
+                      <span class="text-white text-right font-bold uppercase tracking-[0.15em] text-[11px] bg-white/[0.08] border border-white/10 px-3 py-1 bg-neutral-900 shadow-sm rounded-sm">
+                        ОПЕРАТОР, МОНТАЖ
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CARD M3 -->
+                <div 
+                  class="portfolio-card group relative rounded-md overflow-hidden bg-white/[0.01] backdrop-blur-xl border border-white/[0.06] hover:border-white/20 transition-all duration-300 cursor-pointer flex flex-col h-full hover:shadow-[0_24px_50px_rgba(0,0,0,0.9)]"
+                  style="WebkitTapHighlightColor: transparent"
+                  data-id="m3"
+                  data-youtube-id="rZFedZD4TXY"
+                  data-category="montage"
+                  data-role="МОНТАЖ"
+                  data-title="СИЛОВОЙ ЭКСТРИМ В ГАРАЖЕ (.feat Дядя-Миша)"
+                  data-description="Лайфстайл формат"
+                  data-duration="16:04"
+                  data-tags="Лайфстайл, Экстрим, Гараж"
+                >
+                  <div class="relative aspect-video w-full overflow-hidden bg-neutral-950 shrink-0 border-b border-white/[0.06]">
+                    <!-- YouTube Direct link button -->
+                    <a 
+                      href="https://www.youtube.com/watch?v=rZFedZD4TXY" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      class="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-red-650 hover:bg-red-700 active:scale-95 text-white font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-md cursor-pointer select-none"
+                      onclick="event.stopPropagation();"
+                    >
+                      <svg class="w-3.5 h-3.5 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                        <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.518 3.55 12 3.55 12 3.55s-7.518 0-9.388.505a3.003 3.003 0 0 0-2.11 2.108C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.482 20.45 12 20.45 12 20.45s7.518 0 9.388-.505a3.003 3.003 0 0 0 2.11-2.108C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <span>Посмотреть на YouTube</span>
+                    </a>
+                    <img
+                      src="thumbnails/rZFedZD4TXY.jpg"
+                      onerror="handleImgError(this, 'rZFedZD4TXY')"
+                      alt="Силовой экстрим в гараже"
+                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-102"
+                      loading="lazy"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90"></div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
+                      <div class="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg transform scale-100 group-hover:scale-110 transition-transform duration-200">
+                        <svg class="w-5 h-5 fill-current ml-0.5 text-black" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="6 3 20 12 6 21 6 3"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <span class="absolute bottom-3 right-3 px-2 py-0.5 text-[9px] font-mono bg-black/95 rounded-xs border border-white/10 text-neutral-400">
+                      16:04
+                    </span>
+                  </div>
+                  <div class="p-5 flex flex-col justify-between flex-grow bg-transparent">
+                    <div class="space-y-1.5">
+                      <h3 class="text-sm font-medium text-white group-hover:text-neutral-300 transition-colors line-clamp-1">
+                        СИЛОВОЙ ЭКСТРИМ В ГАРАЖЕ (.feat Дядя-Миша)
+                      </h3>
+                      <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+                        Лайфстайл формат
+                      </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
+                      <span class="text-neutral-500 uppercase tracking-widest text-[10px]">Участие:</span>
+                      <span class="text-white text-right font-bold uppercase tracking-[0.15em] text-[11px] bg-white/[0.08] border border-white/10 px-3 py-1 bg-neutral-900 shadow-sm rounded-sm">
+                        МОНТАЖ
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CARD M4 -->
+                <div 
+                  class="portfolio-card group relative rounded-md overflow-hidden bg-white/[0.01] backdrop-blur-xl border border-white/[0.06] hover:border-white/20 transition-all duration-300 cursor-pointer flex flex-col h-full hover:shadow-[0_24px_50px_rgba(0,0,0,0.9)]"
+                  style="WebkitTapHighlightColor: transparent"
+                  data-id="m4"
+                  data-youtube-id="i6PL2CwzAAE"
+                  data-category="montage"
+                  data-role="МОНТАЖ"
+                  data-title="УХОЖУ В АРМРЕСТЛИНГ. Секретные упражнения для СИЛЬНЫХ РУК. Качаем кисть…"
+                  data-description="Развлекательный контент"
+                  data-duration="13:58"
+                  data-tags="Развлечение, Армрестлинг, Тренировка"
+                >
+                  <div class="relative aspect-video w-full overflow-hidden bg-neutral-950 shrink-0 border-b border-white/[0.06]">
+                    <!-- YouTube Direct link button -->
+                    <a 
+                      href="https://www.youtube.com/watch?v=i6PL2CwzAAE" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      class="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-red-650 hover:bg-red-700 active:scale-95 text-white font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-md cursor-pointer select-none"
+                      onclick="event.stopPropagation();"
+                    >
+                      <svg class="w-3.5 h-3.5 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                        <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.518 3.55 12 3.55 12 3.55s-7.518 0-9.388.505a3.003 3.003 0 0 0-2.11 2.108C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.482 20.45 12 20.45 12 20.45s7.518 0 9.388-.505a3.003 3.003 0 0 0 2.11-2.108C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <span>Посмотреть на YouTube</span>
+                    </a>
+                    <img
+                      src="thumbnails/i6PL2CwzAAE.jpg"
+                      onerror="handleImgError(this, 'i6PL2CwzAAE')"
+                      alt="Ухожу в армрестлинг"
+                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-102"
+                      loading="lazy"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90"></div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
+                      <div class="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg transform scale-100 group-hover:scale-110 transition-transform duration-200">
+                        <svg class="w-5 h-5 fill-current ml-0.5 text-black" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="6 3 20 12 6 21 6 3"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <span class="absolute bottom-3 right-3 px-2 py-0.5 text-[9px] font-mono bg-black/95 rounded-xs border border-white/10 text-neutral-400">
+                      13:58
+                    </span>
+                  </div>
+                  <div class="p-5 flex flex-col justify-between flex-grow bg-transparent">
+                    <div class="space-y-1.5">
+                      <h3 class="text-sm font-medium text-white group-hover:text-neutral-300 transition-colors line-clamp-1">
+                        УХОЖУ В АРМРЕСТЛИНГ. Секретные упражнения для СИЛЬНЫХ РУК. Качаем кисть…
+                      </h3>
+                      <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+                        Развлекательный контент
+                      </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
+                      <span class="text-neutral-500 uppercase tracking-widest text-[10px]">Участие:</span>
+                      <span class="text-white text-right font-bold uppercase tracking-[0.15em] text-[11px] bg-white/[0.08] border border-white/10 px-3 py-1 bg-neutral-900 shadow-sm rounded-sm">
+                        МОНТАЖ
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CARD M5 -->
+                <div 
+                  class="portfolio-card group relative rounded-md overflow-hidden bg-white/[0.01] backdrop-blur-xl border border-white/[0.06] hover:border-white/20 transition-all duration-300 cursor-pointer flex flex-col h-full hover:shadow-[0_24px_50px_rgba(0,0,0,0.9)]"
+                  style="WebkitTapHighlightColor: transparent"
+                  data-id="m5"
+                  data-youtube-id="ytD8_0-azUY"
+                  data-category="montage"
+                  data-role="МОНТАЖ"
+                  data-title="КАК НАКАЧАТЬ ОГРОМНУЮ СПИНУ ЗА 10 МИНУТ В ДЕНЬ (но это не точно) и использовать это в жиме!?"
+                  data-description="Обучающий развлекательный формат"
+                  data-duration="12:24"
+                  data-tags="Обучение, Развлечение, Спина"
+                >
+                  <div class="relative aspect-video w-full overflow-hidden bg-neutral-950 shrink-0 border-b border-white/[0.06]">
+                    <!-- YouTube Direct link button -->
+                    <a 
+                      href="https://www.youtube.com/watch?v=ytD8_0-azUY" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      class="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-red-650 hover:bg-red-700 active:scale-95 text-white font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-md cursor-pointer select-none"
+                      onclick="event.stopPropagation();"
+                    >
+                      <svg class="w-3.5 h-3.5 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                        <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.518 3.55 12 3.55 12 3.55s-7.518 0-9.388.505a3.003 3.003 0 0 0-2.11 2.108C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.482 20.45 12 20.45 12 20.45s7.518 0 9.388-.505a3.003 3.003 0 0 0 2.11-2.108C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <span>Посмотреть на YouTube</span>
+                    </a>
+                    <img
+                      src="thumbnails/ytD8_0-azUY.jpg"
+                      onerror="handleImgError(this, 'ytD8_0-azUY')"
+                      alt="Как накачать спину"
+                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-102"
+                      loading="lazy"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90"></div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
+                      <div class="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg transform scale-100 group-hover:scale-110 transition-transform duration-200">
+                        <svg class="w-5 h-5 fill-current ml-0.5 text-black" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="6 3 20 12 6 21 6 3"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <span class="absolute bottom-3 right-3 px-2 py-0.5 text-[9px] font-mono bg-black/95 rounded-xs border border-white/10 text-neutral-400">
+                      12:24
+                    </span>
+                  </div>
+                  <div class="p-5 flex flex-col justify-between flex-grow bg-transparent">
+                    <div class="space-y-1.5">
+                      <h3 class="text-sm font-medium text-white group-hover:text-neutral-300 transition-colors line-clamp-1">
+                        КАК НАКАЧАТЬ ОГРОМНУЮ СПИНУ ЗА 10 МИНУТ В ДЕНЬ (но это не точно) и использовать это в жиме!?
+                      </h3>
+                      <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+                        Обучающий развлекательный формат
+                      </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
+                      <span class="text-neutral-500 uppercase tracking-widest text-[10px]">Участие:</span>
+                      <span class="text-white text-right font-bold uppercase tracking-[0.15em] text-[11px] bg-white/[0.08] border border-white/10 px-3 py-1 bg-neutral-900 shadow-sm rounded-sm">
+                        МОНТАЖ
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CARD S1 -->
+                <div 
+                  class="portfolio-card group relative rounded-md overflow-hidden bg-white/[0.01] backdrop-blur-xl border border-white/[0.06] hover:border-white/20 transition-all duration-300 cursor-pointer flex flex-col h-full hover:shadow-[0_24px_50px_rgba(0,0,0,0.9)]"
+                  style="WebkitTapHighlightColor: transparent"
+                  data-id="s1"
+                  data-youtube-id="EgoQhNbwHQk"
+                  data-category="shooting"
+                  data-role="ОПЕРАТОР, МОНТАЖ"
+                  data-title="МОЙ ПЕРВЫЙ АРМФАЙТ... P.S. я пришел, чтобы проиграть и стать сильнее!!!"
+                  data-description="Лайфстайл, сторителлинг"
+                  data-duration="18:12"
+                  data-tags="Лайфстайл, Сторителлинг, Армфайт"
+                >
+                  <div class="relative aspect-video w-full overflow-hidden bg-neutral-950 shrink-0 border-b border-white/[0.06]">
+                    <!-- YouTube Direct link button -->
+                    <a 
+                      href="https://www.youtube.com/watch?v=EgoQhNbwHQk" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      class="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-red-650 hover:bg-red-700 active:scale-95 text-white font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-md cursor-pointer select-none"
+                      onclick="event.stopPropagation();"
+                    >
+                      <svg class="w-3.5 h-3.5 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                        <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.518 3.55 12 3.55 12 3.55s-7.518 0-9.388.505a3.003 3.003 0 0 0-2.11 2.108C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.482 20.45 12 20.45 12 20.45s7.518 0 9.388-.505a3.003 3.003 0 0 0 2.11-2.108C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <span>Посмотреть на YouTube</span>
+                    </a>
+                    <img
+                      src="thumbnails/EgoQhNbwHQk.jpg"
+                      onerror="handleImgError(this, 'EgoQhNbwHQk')"
+                      alt="Мой первый armfight"
+                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-102"
+                      loading="lazy"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90"></div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
+                      <div class="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg transform scale-100 group-hover:scale-110 transition-transform duration-200">
+                        <svg class="w-5 h-5 fill-current ml-0.5 text-black" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="6 3 20 12 6 21 6 3"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <span class="absolute bottom-3 right-3 px-2 py-0.5 text-[9px] font-mono bg-black/95 rounded-xs border border-white/10 text-neutral-400">
+                      18:12
+                    </span>
+                  </div>
+                  <div class="p-5 flex flex-col justify-between flex-grow bg-transparent">
+                    <div class="space-y-1.5">
+                      <h3 class="text-sm font-medium text-white group-hover:text-neutral-300 transition-colors line-clamp-1">
+                        МОЙ ПЕРВЫЙ АРМФАЙТ... P.S. я пришел, чтобы проиграть и стать сильнее!!!
+                      </h3>
+                      <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+                        Лайфстайл, сторителлинг
+                      </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
+                      <span class="text-neutral-500 uppercase tracking-widest text-[10px]">Участие:</span>
+                      <span class="text-white text-right font-bold uppercase tracking-[0.15em] text-[11px] bg-white/[0.08] border border-white/10 px-3 py-1 bg-neutral-900 shadow-sm rounded-sm">
+                        ОПЕРАТОР, МОНТАЖ
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- CARD S2 -->
+                <div 
+                  class="portfolio-card group relative rounded-md overflow-hidden bg-white/[0.01] backdrop-blur-xl border border-white/[0.06] hover:border-white/20 transition-all duration-300 cursor-pointer flex flex-col h-full hover:shadow-[0_24px_50px_rgba(0,0,0,0.9)]"
+                  style="WebkitTapHighlightColor: transparent"
+                  data-id="s2"
+                  data-youtube-id="6Q16jA98V4E"
+                  data-category="shooting"
+                  data-role="ОПЕРАТОР, МОНТАЖ"
+                  data-title="Продуктовая корзина ДЛЯ НАБОРА МАССЫ от КОРЯГИ и ГЕГЕМОНА!? Что есть, чтобы СТАТЬ СИЛЬНЕЕ? "
+                  data-description="Лайфстайл"
+                  data-duration="14:50"
+                  data-tags="Лайфстайл, Масса, Закупка"
+                >
+                  <div class="relative aspect-video w-full overflow-hidden bg-neutral-950 shrink-0 border-b border-white/[0.06]">
+                    <!-- YouTube Direct link button -->
+                    <a 
+                      href="https://www.youtube.com/watch?v=6Q16jA98V4E" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      class="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xs bg-red-650 hover:bg-red-700 active:scale-95 text-white font-mono text-[10px] sm:text-xs uppercase tracking-wider transition-all duration-200 shadow-md cursor-pointer select-none"
+                      onclick="event.stopPropagation();"
+                    >
+                      <svg class="w-3.5 h-3.5 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                        <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.518 3.55 12 3.55 12 3.55s-7.518 0-9.388.505a3.003 3.003 0 0 0-2.11 2.108C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.482 20.45 12 20.45 12 20.45s7.518 0 9.388-.505a3.003 3.003 0 0 0 2.11-2.108C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                      </svg>
+                      <span>Посмотреть на YouTube</span>
+                    </a>
+                    <img
+                      src="thumbnails/6Q16jA98V4E.jpg"
+                      onerror="handleImgError(this, '6Q16jA98V4E')"
+                      alt="Продуктовая корзина"
+                      class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-102"
+                      loading="lazy"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-90"></div>
+                    <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40">
+                      <div class="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center shadow-lg transform scale-100 group-hover:scale-110 transition-transform duration-200">
+                        <svg class="w-5 h-5 fill-current ml-0.5 text-black" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="6 3 20 12 6 21 6 3"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <span class="absolute bottom-3 right-3 px-2 py-0.5 text-[9px] font-mono bg-black/95 rounded-xs border border-white/10 text-neutral-400">
+                      14:50
+                    </span>
+                  </div>
+                  <div class="p-5 flex flex-col justify-between flex-grow bg-transparent">
+                    <div class="space-y-1.5">
+                      <h3 class="text-sm font-medium text-white group-hover:text-neutral-300 transition-colors line-clamp-1">
+                        Продуктовая корзина ДЛЯ НАБОРА МАССЫ от КОРЯГИ и ГЕГЕМОНА!? Что есть, чтобы СТАТЬ СИЛЬНЕЕ? 
+                      </h3>
+                      <p class="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
+                        Лайфстайл
+                      </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white/[0.06] flex items-center justify-between text-xs font-mono">
+                      <span class="text-neutral-500 uppercase tracking-widest text-[10px]">Участие:</span>
+                      <span class="text-white text-right font-bold uppercase tracking-[0.15em] text-[11px] bg-white/[0.08] border border-white/10 px-3 py-1 bg-neutral-900 shadow-sm rounded-sm">
+                        ОПЕРАТОР, МОНТАЖ
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </section>
+
+          </div>
+
+          <!-- RIGHT SIDE: Dynamic Rates Panel -->
+          <section class="lg:col-span-4 p-6 sm:p-12 lg:sticky lg:top-20 space-y-6 self-start">
+            <div id="rates-card" class="w-full flex flex-col gap-4">
+              
+              <!-- RATE BLOCK: MONTAGE -->
+              <div 
+                id="rate-card-montage"
+                class="border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl p-4 sm:p-5 rounded-md shadow-2xl relative overflow-hidden transition-all duration-300 hover:border-white/20 group cursor-default transform hover:scale-[1.01]"
+              >
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/[0.01] rounded-full filter blur-2xl pointer-events-none"></div>
+                
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/[0.06] pb-2.5 gap-2 mb-3.5">
+                  <span class="text-lg sm:text-xl font-mono uppercase tracking-[0.08em] text-[#F5F5F5] font-bold">
+                    Монтаж
+                  </span>
+                  <span class="text-lg sm:text-xl font-bold font-mono text-neutral-300 tracking-tight shrink-0">
+                    от 3 000 ₽
+                  </span>
+                </div>
+
+                <ul class="space-y-3 text-neutral-300 font-sans text-xs sm:text-sm">
+                  <li class="flex items-start gap-2.5 leading-relaxed">
+                    <span class="text-neutral-500 text-[11px] mt-1 shrink-0">◼</span>
+                    <div>
+                      <strong class="text-white font-bold block text-sm">
+                        Форматы видео
+                      </strong>
+                      <span class="text-neutral-300 text-xs sm:text-sm block mt-0.5 leading-normal">
+                        Любые современные форматы: реклама, интервью, бекстейджи, лайфстайлы, обзоры, блоги и всякое разное.
+                      </span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- RATE BLOCK: SHOOTING -->
+              <div 
+                id="rate-card-shooting"
+                class="border border-white/[0.08] bg-white/[0.02] backdrop-blur-xl p-4 sm:p-5 rounded-md shadow-2xl relative overflow-hidden transition-all duration-300 hover:border-white/20 group cursor-default transform hover:scale-[1.01]"
+              >
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/[0.01] rounded-full filter blur-2xl pointer-events-none"></div>
+
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/[0.06] pb-2.5 gap-2 mb-3.5">
+                  <span class="text-lg sm:text-xl font-mono uppercase tracking-[0.08em] text-[#F5F5F5] font-bold">
+                    Съемка
+                  </span>
+                  <span class="text-lg sm:text-xl font-bold font-mono text-neutral-300 tracking-tight shrink-0">
+                    от 2 500 ₽/ч
+                  </span>
+                </div>
+
+                <ul class="space-y-3 text-neutral-300 font-sans text-xs sm:text-sm">
+                  <li class="flex items-start gap-2.5 leading-relaxed">
+                    <span class="text-neutral-500 text-[11px] mt-1 shrink-0">◼</span>
+                    <div>
+                      <strong class="text-white font-bold block text-sm">
+                        Локация & выезд
+                      </strong>
+                      <span class="text-neutral-300 text-xs sm:text-sm block mt-0.5 leading-normal">
+                        Работаю в городе Санкт-Петербург и ЛО. На особенных условиях рассматриваю и другие пункты.
+                      </span>
+                    </div>
+                  </li>
+                  <li class="flex items-start gap-2.5 leading-relaxed">
+                    <span class="text-neutral-500 text-[11px] mt-1 shrink-0">◼</span>
+                    <div>
+                      <strong class="text-white font-bold block text-sm">
+                        Оборудование
+                      </strong>
+                      <span class="text-neutral-300 text-xs sm:text-sm block mt-0.5 leading-normal">
+                        Съёмка на дорогое профессиональное оборудование с петличками или микрофоном-пушкой.
+                      </span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+            </div>
+          </section>
+
+        </div>
+      </main>
+
+      <!-- Cinematic Modal Player overlay -->
+      <div id="video-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <!-- Dark Overlay backdrop -->
+        <div id="modal-overlay" class="absolute inset-0 bg-[#020204]/90 backdrop-blur-md cursor-zoom-out"></div>
+
+        <!-- Modal Container -->
+        <div class="relative w-full max-w-4xl glass-panel rounded-sm overflow-hidden border border-neutral-800 shadow-2xl z-10 animate-scale-up">
+          <!-- Header / Info bar inside modal -->
+          <div class="flex items-center justify-between p-4 px-6 border-b border-neutral-800 bg-neutral-900/40">
+            <div class="flex items-center gap-3">
+              <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              <span class="font-mono text-[10px] text-neutral-400 tracking-wider uppercase">
+                Просмотр видео
+              </span>
+            </div>
+            
+            <div class="flex items-center gap-3.5">
+              <!-- Watch on YouTube button in modal (Identical) -->
+              <a 
+                id="modal-youtube-link"
+                href="#" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xs bg-red-650 hover:bg-red-700 active:scale-95 text-white font-mono text-[9px] sm:text-[10px] uppercase tracking-wider transition-all duration-200 shadow-md cursor-pointer select-none"
+              >
+                <svg class="w-3.5 h-3.5 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                  <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.108C19.518 3.55 12 3.55 12 3.55s-7.518 0-9.388.505a3.003 3.003 0 0 0-2.11 2.108C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.108C4.482 20.45 12 20.45 12 20.45s7.518 0 9.388-.505a3.003 3.003 0 0 0 2.11-2.108C24 15.967 24 12 24 12s0-3.967-.502-5.837zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                <span>Посмотреть на YouTube</span>
+              </a>
+
+              <button
+                id="modal-close-btn"
+                aria-label="Закрыть"
+                class="p-1 px-3 py-1.5 rounded-xs text-neutral-400 hover:text-white hover:bg-neutral-900 transition-colors flex items-center gap-1.5 text-[10px] font-mono border border-neutral-850 cursor-pointer h-full"
+              >
+                <span>Закрыть</span>
+                <!-- X Icon SVG -->
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Player Aspect Frame -->
+          <div class="relative aspect-video bg-black">
+            <iframe
+              id="modal-iframe"
+              title="YouTube Player"
+              class="absolute inset-0 w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+            ></iframe>
+          </div>
+
+          <!-- Footer with the disclaimer note only -->
+          <div class="p-4 px-6 bg-[#080808] border-t border-neutral-800 flex items-start gap-3">
+            <svg class="w-4 h-4 text-amber-500/80 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <p class="text-[11px] sm:text-xs font-sans text-neutral-400 leading-normal">
+              Примечание: Видео может не загружаться на территории РФ в связи с техническими особенностями работы YouTube. Если плеер пуст даже с VPN, попробуйте перейти на сайт YouTube по кнопке сверху.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MAIN SCRIPT INITIALIZATION (No module types so browser security allows local disk run) -->
+    <script>
+      // State management flags
+      var activeTab = 'overview';
+      var activeCategory = 'all';
+
+      // Setup actions on page load
+      window.addEventListener('DOMContentLoaded', function() {
+        initTabs();
+        initCategories();
+        initModal();
+        initParallax();
+      });
+
+      // Controls tab sections ("Обзор" and "Портфолио")
+      function initTabs() {
+        var tabOverviewBtn = document.getElementById('tab-btn-overview');
+        var tabPortfolioBtn = document.getElementById('tab-btn-portfolio');
+        var overviewScreen = document.getElementById('overview-screen');
+        var portfolioScreen = document.getElementById('portfolio-screen');
+        var navTabUnderlay = document.getElementById('nav-tab-underlay');
+        var linkToPortfolioBtn = document.getElementById('link-to-portfolio');
+
+        function setTab(tab) {
+          activeTab = tab;
+          
+          if (activeTab === 'overview') {
+            overviewScreen.classList.remove('hidden');
+            portfolioScreen.classList.add('hidden');
+
+            tabOverviewBtn.classList.add('text-white', 'font-bold');
+            tabOverviewBtn.classList.remove('text-neutral-400');
+            tabPortfolioBtn.classList.remove('text-white', 'font-bold');
+            tabPortfolioBtn.classList.add('text-neutral-400');
+
+            if (navTabUnderlay) {
+              navTabUnderlay.style.transform = 'translateX(0)';
+            }
+          } else {
+            overviewScreen.classList.add('hidden');
+            portfolioScreen.classList.remove('hidden');
+
+            tabPortfolioBtn.classList.add('text-white', 'font-bold');
+            tabPortfolioBtn.classList.remove('text-neutral-400');
+            tabOverviewBtn.classList.remove('text-white', 'font-bold');
+            tabOverviewBtn.classList.add('text-neutral-400');
+
+            if (navTabUnderlay) {
+              navTabUnderlay.style.transform = 'translateX(100%)';
+            }
+          }
+        }
+
+        if (tabOverviewBtn) tabOverviewBtn.addEventListener('click', function() { setTab('overview'); });
+        if (tabPortfolioBtn) tabPortfolioBtn.addEventListener('click', function() { setTab('portfolio'); });
+        if (linkToPortfolioBtn) linkToPortfolioBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          setTab('portfolio');
+        });
+      }
+
+      // Portfolio filtering tabs ("Все работы", "Видеомонтаж", "Видеосъемка")
+      function initCategories() {
+        var filterAllBtn = document.getElementById('filter-btn-all');
+        var filterMontageBtn = document.getElementById('filter-btn-montage');
+        var filterShootingBtn = document.getElementById('filter-btn-shooting');
+        var activeStatusLabel = document.getElementById('active-status-label');
+        var worksCountLabel = document.getElementById('works-count-label');
+
+        var rateCardMontage = document.getElementById('rate-card-montage');
+        var rateCardShooting = document.getElementById('rate-card-shooting');
+        var portfolioCards = document.querySelectorAll('.portfolio-card');
+
+        function applyCategory(category) {
+          activeCategory = category;
+
+          var buttons = [
+            { cat: 'all', el: filterAllBtn },
+            { cat: 'montage', el: filterMontageBtn },
+            { cat: 'shooting', el: filterShootingBtn }
+          ];
+
+          buttons.forEach(function(btn) {
+            if (!btn.el) return;
+            if (btn.cat === activeCategory) {
+              btn.el.classList.add('bg-white/[0.08]', 'text-white', 'border-white/20', 'shadow-md', 'shadow-black/80');
+              btn.el.classList.remove('bg-white/[0.02]', 'text-neutral-400', 'border-white/[0.06]');
+            } else {
+              btn.el.classList.remove('bg-white/[0.08]', 'text-white', 'border-white/20', 'shadow-md', 'shadow-black/80');
+              btn.el.classList.add('bg-white/[0.02]', 'text-neutral-400', 'border-white/[0.06]');
+            }
+          });
+
+          if (activeStatusLabel) {
+            if (category === 'all') activeStatusLabel.textContent = 'Все работы';
+            if (category === 'montage') activeStatusLabel.textContent = 'Видеомонтаж';
+            if (category === 'shooting') activeStatusLabel.textContent = 'Видеосъемка';
+          }
+
+          var visibleCount = 0;
+          portfolioCards.forEach(function(cardEl) {
+            var cardCategory = cardEl.getAttribute('data-category');
+            var cardRole = (cardEl.getAttribute('data-role') || '').toLowerCase();
+
+            var show = false;
+            if (category === 'all') {
+              show = true;
+            } else if (category === 'montage') {
+              show = (cardCategory === 'montage' || cardRole.indexOf('монтаж') !== -1);
+            } else if (category === 'shooting') {
+              show = (cardCategory === 'shooting' || cardRole.indexOf('оператор') !== -1);
+            }
+
+            if (show) {
+              cardEl.classList.remove('hidden');
+              visibleCount++;
+            } else {
+              cardEl.classList.add('hidden');
+            }
+          });
+
+          if (worksCountLabel) {
+            worksCountLabel.textContent = 'Работы (' + visibleCount + ')';
+          }
+
+          if (category === 'all') {
+            if (rateCardMontage) rateCardMontage.classList.remove('hidden');
+            if (rateCardShooting) rateCardShooting.classList.remove('hidden');
+          } else if (category === 'montage') {
+            if (rateCardMontage) rateCardMontage.classList.remove('hidden');
+            if (rateCardShooting) rateCardShooting.classList.add('hidden');
+          } else if (category === 'shooting') {
+            if (rateCardMontage) rateCardMontage.classList.add('hidden');
+            if (rateCardShooting) rateCardShooting.classList.remove('hidden');
+          }
+        }
+
+        if (filterAllBtn) filterAllBtn.addEventListener('click', function() { applyCategory('all'); });
+        if (filterMontageBtn) filterMontageBtn.addEventListener('click', function() { applyCategory('montage'); });
+        if (filterShootingBtn) filterShootingBtn.addEventListener('click', function() { applyCategory('shooting'); });
+      }
+
+      // YouTube Cinematic player
+      function initModal() {
+        var modal = document.getElementById('video-modal');
+        var closeBtn = document.getElementById('modal-close-btn');
+        var iframe = document.getElementById('modal-iframe');
+        var overlay = document.getElementById('modal-overlay');
+
+        var portfolioCards = document.querySelectorAll('.portfolio-card');
+
+        function openModal(card) {
+          var youtubeId = card.getAttribute('data-youtube-id');
+          var youtubeLinkBtn = document.getElementById('modal-youtube-link');
+
+          if (iframe && youtubeId) {
+            iframe.src = 'https://www.youtube.com/embed/' + youtubeId + '?autoplay=1&rel=0';
+          }
+          if (youtubeLinkBtn && youtubeId) {
+            youtubeLinkBtn.href = 'https://www.youtube.com/watch?v=' + youtubeId;
+          }
+
+          if (modal) modal.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+          if (iframe) {
+            iframe.src = '';
+          }
+          if (modal) modal.classList.add('hidden');
+          document.body.style.overflow = '';
+        }
+
+        portfolioCards.forEach(function(card) {
+          card.addEventListener('click', function() { openModal(card); });
+        });
+
+        if (closeBtn) closeBtn.addEventListener('click', closeModal);
+        if (overlay) overlay.addEventListener('click', closeModal);
+
+        window.addEventListener('keydown', function(e) {
+          if (e.key === 'Escape') closeModal();
+        });
+      }
+
+      // Parallax layout tracker
+      function initParallax() {
+        var bgHighlight = document.getElementById('bg-highlight');
+        
+        document.addEventListener('mousemove', function(e) {
+          var clientX = e.clientX;
+          var clientY = e.clientY;
+          var x = (clientX - window.innerWidth / 2) / 45;
+          var y = (clientY - window.innerHeight / 2) / 45;
+          
+          if (bgHighlight) {
+            bgHighlight.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
